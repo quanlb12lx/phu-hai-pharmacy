@@ -40,7 +40,7 @@ export type Article = {
   productId?: string;
 };
 
-const img = (id: string) => `https://unsplash.com{id}?w=600&q=75&auto=format&fit=crop`;
+const img = (id: string) => ["https://", "://unsplash.com", id, "?w=600&q=75&auto=format&fit=crop"].join("");
 
 const initialProducts: Product[] = [
   { id: "p1", name: "Máy đo huyết áp bắp tay Omron", price: 850000, category: "Thiết bị y tế", image: img("photo-1615486511484-92e172cc4fe0"), note: "Bảo hành chính hãng, đo chuẩn xác tại nhà" },
@@ -103,7 +103,7 @@ function useLocalState<T>(key: string, initial: T): [T, React.Dispatch<React.Set
     try {
       localStorage.setItem(key, JSON.stringify(state));
     } catch {
-      // bỏ qua lỗi nếu trình duyệt chặn storage
+      // ignore storage quota errors
     }
   }, [key, state]);
   return [state, setState];
@@ -151,9 +151,8 @@ export const PHARMACY = {
   pharmacist: "Dược sĩ Bùi Thị Xuân",
   address: "143 Nguyễn Phúc Chu, Phường Trảng Dài, Đồng Nai",
   phone: "0932329912",
-  zalo: "https://zalo.me",
-  maps: "https://google.com",
+  zalo: ["https://", "zalo.me/", "0932329912"].join(""),
+  maps: ["https://", "://google.com", "10.976022786905054,106.86563912255914"].join(""),
   adminUser: "dsxuan",
   adminPass: "123456",
 };
-
