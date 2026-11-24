@@ -152,7 +152,7 @@ export const PHARMACY = {
   address: "143 Nguyễn Phúc Chu, Phường Trảng Dài, Đồng Nai",
   phone: "0932329912",
   zalo: ["https://", "zalo.me/", "0932329912"].join(""),
-  maps: ["https://", "://google.com", "10.976022786905054,106.86563912255914"].join(""),
+   maps: ["https", "://", "www.google.com", "/maps/dir/?api=1&destination=", "10.976022786905054,106.86563912255914"].join(""),
   adminUser: "dsxuan",
   adminPass: "123456",
 };
