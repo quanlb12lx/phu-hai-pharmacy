@@ -1,107 +1,68 @@
-import React, { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PHARMACY, usePharmacyStore } from "../lib/store";
-import { Btn } from "../components/app/ui";
-import { PatientView } from "../components/app/Patient";
-import { AdminView } from "../components/app/Admin";
+import { useState } from "react";
+import { Lock, ArrowLeft } from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
+import { StoreProvider, PHARMACY } from "@/lib/store";
+import { PatientView } from "@/components/app/Patient";
+import { AdminView } from "@/components/app/Admin";
 
 export const Route = createFileRoute("/")({
-  component: HomePage,
+  head: () => ({
+    meta: [
+      { title: "Nhà Thuốc Phú Hải – DS. Bùi Thị Xuân, Trảng Dài" },
+      { name: "description", content: "Tư vấn thuốc, đặt giữ hàng và chỉ đường tới Nhà Thuốc Phú Hải, 143 Nguyễn Phúc Chu, Trảng Dài, Đồng Nai." },
+      { property: "og:title", content: "Nhà Thuốc Phú Hải – DS. Bùi Thị Xuân" },
+      { property: "og:description", content: "Chăm sóc sức khỏe tận tâm cho gia đình tại Trảng Dài, Đồng Nai." },
+      { property: "og:type", content: "website" },
+    ],
+  }),
+  component: Index,
 });
 
-function HomePage() {
-  const [mode, setMode] = useState<"patient" | "admin">("patient");
-  const store = usePharmacyStore();
-
-  const zaloUrl = ["https", "://", "zalo.me/", PHARMACY.phone].join("");
-  const mapsUrl = [
-    "https",
-    "://",
-    "://google.com",
-    PHARMACY.lat,
-    ",",
-    PHARMACY.lng,
-  ].join("");
+function Index() {
+  const [role, setRole] = useState<"patient" | "admin">("patient");
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-emerald-100 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setMode("patient")}
-            className="flex items-center gap-3 text-left focus:outline-none"
-          >
-            <img
-              src="/logo.png"
-              alt="Logo Nhà Thuốc Phú Hải"
-              className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl object-contain bg-white p-0.5 shadow-sm border border-emerald-100 shrink-0"
-            />
-            <div>
-              <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-                {PHARMACY.name}
-              </h1>
-              <p className="text-xs text-emerald-700 font-medium">
-                {PHARMACY.pharmacist} • Trảng Dài
-              </p>
-            </div>
-          </button>
+    <StoreProvider>
+      <div className="min-h-screen bg-background [--hdr:72px]">
+        <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
+          <div className="mx-auto flex h-[72px] max-w-4xl items-center justify-between gap-3 px-4">
+            <button onClick={() => setRole("patient")} className="flex items-center gap-3 text-left">
+              <img
+                src="/logo.png"
+                alt="Logo Nhà Thuốc Phú Hải"
+                className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-0.5 shadow-sm border border-border"
+              />
+              <div>
+                <p className="text-xl font-extrabold leading-tight text-foreground">{PHARMACY.name}</p>
+                <p className="text-sm font-semibold text-primary-deep">{PHARMACY.pharmacist}</p>
+              </div>
+            </button>
 
-          <div className="flex items-center gap-2">
-            {mode === "patient" ? (
-              <>
-                <a
-                  href={zaloUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hidden sm:inline-flex items-center px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                >
-                  Zalo: {PHARMACY.phone}
-                </a>
-                <Btn variant="outline" onClick={() => setMode("admin")} className="text-xs sm:text-sm">
-                  Góc Dược sĩ
-                </Btn>
-              </>
+            {role === "patient" ? (
+              <button
+                onClick={() => setRole("admin")}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-secondary/70 px-3.5 text-sm font-bold text-primary-deep hover:bg-secondary"
+              >
+                <Lock className="h-4 w-4" />
+                Góc Dược sĩ
+              </button>
             ) : (
-              <Btn variant="outline" onClick={() => setMode("patient")} className="text-xs sm:text-sm">
-                ← Trang Khách hàng
-              </Btn>
+              <button
+                onClick={() => setRole("patient")}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Trang Khách hàng
+              </button>
             )}
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
-        {mode === "patient" ? (
-          <PatientView store={store} />
-        ) : (
-          <AdminView store={store} onExit={() => setMode("patient")} />
-        )}
-      </main>
+        {role === "patient" ? <PatientView /> : <AdminView />}
 
-      <footer className="bg-white border-t border-slate-200 mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="Logo Nhà Thuốc Phú Hải"
-              className="h-10 w-10 rounded-xl object-contain bg-white p-0.5 border border-slate-100 shrink-0"
-            />
-            <div>
-              <p className="font-semibold text-slate-800">{PHARMACY.name}</p>
-              <p>{PHARMACY.address}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href={mapsUrl} target="_blank" rel="noreferrer" className="hover:text-emerald-600 underline">
-              Chỉ đường Google Maps
-            </a>
-            <a href={zaloUrl} target="_blank" rel="noreferrer" className="hover:text-emerald-600 underline">
-              Zalo {PHARMACY.phone}
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+        <Toaster position="top-center" richColors toastOptions={{ style: { fontSize: "17px" } }} />
+      </div>
+    </StoreProvider>
   );
 }
