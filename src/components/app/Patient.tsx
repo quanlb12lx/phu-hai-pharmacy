@@ -28,14 +28,6 @@ const tabs = [
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 
-function openZaloWithText(message: string) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(message).catch(() => {});
-  }
-  const url = `${PHARMACY.zalo}?text=${encodeURIComponent(message)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 export function PatientView() {
   const [tab, setTab] = useState<Tab>("home");
 
@@ -117,16 +109,14 @@ function ReserveDialog({ product, onClose }: { product: Product | null; onClose:
               disabled={!name || phone.length < 9}
               onClick={() => {
                 reserve(product.name, name, phone);
-                const msg = `Chào DS. Xuân (Nhà Thuốc Phú Hải), mình đặt giữ hàng:\n- Sản phẩm: ${product.name} (${vnd(product.price)})\n- Khách hàng: ${name}\n- SĐT: ${phone}`;
-                openZaloWithText(msg);
-                toast.success("Đang chuyển sang Zalo DS. Xuân để xác nhận giữ hàng ạ!");
+                toast.success("Đã gửi đơn giữ hàng! DS. Xuân sẽ chuẩn bị sẵn tại quầy ạ.");
                 setName("");
                 setPhone("");
                 onClose();
               }}
             >
               <CheckCircle2 className="h-4 w-4" />
-              Gửi giữ hàng qua Zalo DS. Xuân
+              Xác nhận giữ hàng tại tiệm
             </Btn>
           </div>
         )}
@@ -224,13 +214,14 @@ function HomeTab({ onNavigate }: { onNavigate: (t: Tab) => void }) {
                   <Btn className="h-9 px-2 text-xs" onClick={() => setSelectedProduct(p)}>
                     Giữ hàng
                   </Btn>
-                  <button
-                    type="button"
-                    onClick={() => openZaloWithText(`Chào DS. Xuân, mình muốn hỏi thêm về sản phẩm: ${p.name} (${vnd(p.price)})`)}
+                  <a
+                    href={PHARMACY.zalo}
+                    target="_blank"
+                    rel="noreferrer"
                     className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Zalo
-                  </button>
+                  </a>
                 </div>
               </div>
             </Card>
@@ -312,14 +303,15 @@ function ShopTab() {
                     <ShoppingBag className="h-3.5 w-3.5" />
                     Giữ hàng
                   </Btn>
-                  <button
-                    type="button"
-                    onClick={() => openZaloWithText(`Chào DS. Xuân, mình muốn hỏi thêm về sản phẩm: ${p.name} (${vnd(p.price)})`)}
+                  <a
+                    href={PHARMACY.zalo}
+                    target="_blank"
+                    rel="noreferrer"
                     className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     <MessageCircle className="h-3.5 w-3.5" />
                     Zalo
-                  </button>
+                  </a>
                 </div>
               </div>
             </Card>
@@ -342,8 +334,8 @@ function AskTab() {
       <Card className="border-blue-100 bg-blue-50/50">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-bold text-slate-800">Muốn gửi ảnh đơn thuốc qua Zalo cho nhanh?</p>
-            <p className="mt-0.5 text-xs text-slate-500">Mở Zalo trò chuyện trực tiếp với DS. Bùi Thị Xuân ({PHARMACY.phone}).</p>
+            <p className="text-sm font-bold text-slate-800">Muốn chat trực tiếp qua Zalo cho nhanh?</p>
+            <p className="mt-0.5 text-xs text-slate-500">Mở Zalo trò chuyện với DS. Bùi Thị Xuân ({PHARMACY.phone}).</p>
           </div>
           <a
             href={PHARMACY.zalo}
@@ -358,7 +350,7 @@ function AskTab() {
       </Card>
 
       <Card>
-        <H2 icon={<MessageCircle className="h-5 w-5 text-emerald-600" />}>Để lại thông tin tư vấn qua Zalo</H2>
+        <H2 icon={<MessageCircle className="h-5 w-5 text-emerald-600" />}>Để lại thông tin để DS. Xuân tư vấn</H2>
         <div className="space-y-3.5">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Tên của mình">
@@ -410,7 +402,7 @@ function AskTab() {
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0];
+                const file = e.target.files?.;
                 if (file) {
                   const reader = new FileReader();
                   reader.onload = () => setPhoto(reader.result as string);
@@ -432,25 +424,14 @@ function AskTab() {
                 note: summary,
                 photo,
               });
-              const msg = [
-                `Chào DS. Xuân (Nhà Thuốc Phú Hải), mình cần tư vấn thuốc:`,
-                `- Khách hàng: ${f.name} (${f.phone})`,
-                `- Đối tượng: ${f.who}`,
-                tags.length ? `- Triệu chứng: ${tags.join(", ")}` : "",
-                note ? `- Ghi chú: ${note}` : "",
-                photo ? `- (Mình có chụp ảnh đơn/vỏ thuốc, sẽ gửi kèm ngay bên dưới ạ)` : "",
-              ]
-                .filter(Boolean)
-                .join("\n");
-              openZaloWithText(msg);
-              toast.success("Đã sao chép nội dung & mở Zalo DS. Xuân! Bạn chỉ cần bấm Gửi là xong ạ.");
+              toast.success("Đã gửi yêu cầu! DS. Xuân sẽ xem và liên hệ lại ngay ạ.");
               setF({ name: "", phone: "", who: "Bản thân" });
               setTags([]);
               setNote("");
               setPhoto(undefined);
             }}
           >
-            Gửi yêu cầu tư vấn qua Zalo
+            Gửi yêu cầu tư vấn
           </Btn>
         </div>
       </Card>
