@@ -125,7 +125,7 @@ function Refill() {
           <Card key={p.id}>
             <p className="text-2xl font-extrabold">{p.name}</p>
             <p className="text-xl">{p.med} — <b className="text-destructive">còn {p.days} ngày</b></p>
-            <p className="mt-2 rounded-xl bg-muted p-3 text-lg italic">"Dạ chào {p.name.split(" ")[0].toLowerCase()}, Xuân ở Nhà Thuốc Phú Hải đây ạ. {p.med} của mình còn khoảng {p.days} ngày nữa là hết. Xuân chuẩn bị sẵn, khi nào tiện mình ghé lấy nha. Chúc mình nhiều sức khỏe!"</p>
+            <p className="mt-2 rounded-xl bg-muted p-3 text-lg italic">"Dạ chào {(p.name.split(" ")[0] ?? "").toLowerCase()}, Xuân ở Nhà Thuốc Phú Hải đây ạ. {p.med} của mình còn khoảng {p.days} ngày nữa là hết. Xuân chuẩn bị sẵn, khi nào tiện mình ghé lấy nha. Chúc mình nhiều sức khỏe!"</p>
             <Btn className="mt-3" disabled={p.sent} onClick={() => { setList(list.map((x) => (x.id === p.id ? { ...x, sent: true } : x))); toast.success(`Đã gửi Zalo nhắc ${p.name}`); }}>
               <Send className="h-5 w-5" />{p.sent ? "Đã nhắc ✓" : "Gửi tin nhắn nhắc Zalo"}
             </Btn>

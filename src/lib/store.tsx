@@ -2,7 +2,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 
 export type Callback = {
   id: string; name: string; phone: string; reason: string; note?: string;
-  photo?: string; time: string; done: boolean; pharmacistNote?: string; urgent?: boolean;
+  photo?: string | undefined; time: string; done: boolean; pharmacistNote?: string; urgent?: boolean;
 };
 export type Reservation = { id: string; customer: string; product: string; time: string; ready: boolean };
 export type Product = { id: string; name: string; price: number; category: string; image: string };
