@@ -1,158 +1,297 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type Callback = {
-  id: string;
-  name: string;
-  phone: string;
-  reason: string;
-  note?: string;
-  photo?: string;
-  time: string;
-  done: boolean;
-  pharmacistNote?: string;
-};
-
-export type Reservation = {
-  id: string;
-  customer: string;
-  phone: string;
-  product: string;
-  time: string;
-  ready: boolean;
-};
-
-export type Product = {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  image: string;
-  note?: string;
-};
-
-export type Article = {
-  id: string;
-  title: string;
-  image: string;
-  minutes: number;
-  body: string;
-  advice: string;
-  productId?: string;
-};
-
-const img = (id: string) => ["https://", "://unsplash.com", id, "?w=600&q=75&auto=format&fit=crop"].join("");
-
-const initialProducts: Product[] = [
-  { id: "p1", name: "Máy đo huyết áp bắp tay Omron", price: 850000, category: "Thiết bị y tế", image: img("photo-1615486511484-92e172cc4fe0"), note: "Bảo hành chính hãng, đo chuẩn xác tại nhà" },
-  { id: "p2", name: "Men vi sinh Enterogermina (Hộp 20 ống)", price: 165000, category: "Tiêu hóa", image: img("photo-1584308666744-24d5c474f2ae"), note: "Bổ sung lợi khuẩn, hỗ trợ tiêu hóa khi dùng kháng sinh" },
-  { id: "p3", name: "Nước muối sinh lý Natri Clorid 0.9% (Lốc 10 chai)", price: 45000, category: "Vệ sinh", image: img("photo-1631549916768-4119b2e5f926"), note: "Rửa mũi, súc họng hằng ngày cho cả gia đình" },
-  { id: "p4", name: "Xịt chống muỗi & phòng sốt xuất huyết Remos", price: 68000, category: "Phòng bệnh", image: img("photo-1576602976047-174e57a47881"), note: "Bảo vệ da khỏi muỗi vằn suốt 10 giờ" },
-  { id: "p5", name: "Viên sủi Vitamin C + Kẽm tăng đề kháng", price: 55000, category: "Vitamin", image: img("photo-1607619056574-7b8d3ee536b2"), note: "Hỗ trợ phục hồi sức khỏe, giảm mệt mỏi" },
-  { id: "p6", name: "Sữa dinh dưỡng cho người tiểu đường (Lon 400g)", price: 320000, category: "Dinh dưỡng", image: img("photo-1550583724-b2692b85b150"), note: "Ổn định đường huyết, bổ sung dưỡng chất thiết yếu" },
-];
-
-const initialArticles: Article[] = [
-  {
-    id: "a1",
-    title: "Cảnh báo sốt xuất huyết tại Đồng Nai: 4 dấu hiệu nhận biết sớm",
-    image: img("photo-1584036561566-baf8f5f1b144"),
-    minutes: 3,
-    body: "Mùa mưa ở Trảng Dài, muỗi vằn sinh sản rất nhanh. Bốn dấu hiệu cần chú ý: (1) Sốt cao đột ngột 39–40°C kéo dài 2–7 ngày; (2) Đau nhức đầu, đau sau hốc mắt; (3) Nổi chấm đỏ dưới da, chảy máu chân răng; (4) Đau bụng, nôn ói, mệt lả. Khi có dấu hiệu (3) hoặc (4), cần đưa người bệnh đến bệnh viện ngay.",
-    advice: "Tuyệt đối không tự ý dùng Aspirin hay Ibuprofen khi nghi sốt xuất huyết. Chỉ hạ sốt bằng Paracetamol đúng liều và uống nhiều nước, oresol nha cô chú.",
-    productId: "p4",
-  },
-  {
-    id: "a2",
-    title: "Cách bảo quản thuốc huyết áp, tiểu đường đúng cách mùa nắng nóng",
-    image: img("photo-1471864190281-a93a3070b6de"),
-    minutes: 3,
-    body: "Nhiệt độ trong nhà mùa nắng có thể vượt 35°C. Thuốc nên để nơi khô ráo, dưới 30°C, tránh ánh nắng trực tiếp và không để trong cốp xe máy. Bút tiêm insulin chưa mở nắp cần để ngăn mát tủ lạnh (2–8°C), không để ngăn đá.",
-    advice: "Cô chú đừng bóc vỉ thuốc ra hộp chia sẵn quá 7 ngày, vì thuốc dễ hút ẩm và giảm tác dụng ạ.",
-    productId: "p1",
-  },
-];
-
-type Store = {
-  callbacks: Callback[];
-  addCallback: (c: Omit<Callback, "id" | "time" | "done">) => void;
-  completeCallback: (id: string, note: string) => void;
-  reservations: Reservation[];
-  reserve: (product: string, customer: string, phone: string) => void;
-  markReady: (id: string) => void;
-  products: Product[];
-  addProduct: (p: Omit<Product, "id">) => void;
-  deleteProduct: (id: string) => void;
-  articles: Article[];
-  addArticle: (a: Omit<Article, "id">) => void;
-};
-
-const Ctx = createContext<Store | null>(null);
-const now = () => new Date().toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
-const uid = () => Math.random().toString(36).slice(2, 9);
-
-function useLocalState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [state, setState] = useState<T>(() => {
-    try {
-      const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : initial;
-    } catch {
-      return initial;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // ignore storage quota errors
-    }
-  }, [key, state]);
-  return [state, setState];
-}
-
-export function StoreProvider({ children }: { children: ReactNode }) {
-  const [callbacks, setCallbacks] = useLocalState<Callback[]>("phuhai_callbacks_v2", [
-    { id: "c1", name: "Cô Nguyễn Thị Mai", phone: "0908123456", reason: "Hỏi tư vấn đơn thuốc huyết áp", note: "Muốn hỏi uống trước hay sau ăn", time: "08:15 24/11", done: false },
-    { id: "c2", name: "Anh Lê Văn Tâm", phone: "0912345678", reason: "Gửi ảnh hỏi thuốc cho bé", note: "Trẻ em · Ho/Đau họng", time: "07:40 24/11", done: false },
-  ]);
-
-  const [reservations, setReservations] = useLocalState<Reservation[]>("phuhai_reservations_v2", [
-    { id: "r1", customer: "Cô Lan", phone: "0933456789", product: "Men vi sinh Enterogermina (Hộp 20 ống)", time: "08:30 24/11", ready: false },
-  ]);
-
-  const [products, setProducts] = useLocalState<Product[]>("phuhai_products_v2", initialProducts);
-  const [articles, setArticles] = useLocalState<Article[]>("phuhai_articles_v2", initialArticles);
-
-  const value: Store = {
-    callbacks,
-    addCallback: (c) => setCallbacks((l) => [{ ...c, id: uid(), time: now(), done: false }, ...l]),
-    completeCallback: (id, note) => setCallbacks((l) => l.map((c) => (c.id === id ? { ...c, done: true, pharmacistNote: note } : c))),
-    reservations,
-    reserve: (product, customer, phone) => setReservations((l) => [{ id: uid(), customer, phone, product, time: now(), ready: false }, ...l]),
-    markReady: (id) => setReservations((l) => l.map((r) => (r.id === id ? { ...r, ready: true } : r))),
-    products,
-    addProduct: (p) => setProducts((l) => [{ ...p, id: uid() }, ...l]),
-    deleteProduct: (id) => setProducts((l) => l.filter((p) => p.id !== id)),
-    articles,
-    addArticle: (a) => setArticles((l) => [{ ...a, id: uid() }, ...l]),
-  };
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-export function useStore() {
-  const s = useContext(Ctx);
-  if (!s) throw new Error("useStore outside provider");
-  return s;
-}
-
-export const vnd = (n: number) => n.toLocaleString("vi-VN") + "đ";
-
 export const PHARMACY = {
   name: "Nhà Thuốc Phú Hải",
   pharmacist: "Dược sĩ Bùi Thị Xuân",
   address: "143 Nguyễn Phúc Chu, Phường Trảng Dài, Đồng Nai",
   phone: "0933050507",
-  zalo: ["https://", "zalo.me/", "0933050507"].join(""),
-   maps: ["https", "://", "www.google.com", "/maps/dir/?api=1&destination=", "10.976022786905054,106.86563912255914"].join(""),
+  zalo: ["https", "://", "zalo.me/0933050507"].join(""),
+  maps: ["https", "://", "://google.com"].join(""),
+  hours: "06:30 – 21:30 · Tất cả các ngày trong tuần",
   adminUser: "dsxuan",
   adminPass: "123456",
 };
+
+export type Product = {
+  id: string;
+  name: string;
+  category: "Tăng đề kháng" | "Tiêu hóa" | "Giảm đau - Hạ sốt" | "Chăm sóc gia đình";
+  price: number;
+  note: string;
+  image: string;
+};
+
+export type Article = {
+  id: string;
+  title: string;
+  minutes: number;
+  body: string;
+  advice: string;
+  image: string;
+};
+
+export type CallbackRequest = {
+  id: string;
+  name: string;
+  phone: string;
+  reason: string;
+  note: string;
+  photo?: string;
+  createdAt: string;
+  done: boolean;
+};
+
+export type Reservation = {
+  id: string;
+  productName: string;
+  customerName: string;
+  phone: string;
+  createdAt: string;
+  done: boolean;
+};
+
+const SEED_PRODUCTS: Product[] = [
+  { id: "p1", name: "Vitamin C 500mg + Kẽm Tăng Đề Kháng", category: "Tăng đề kháng", price: 85000, note: "Hộp 30 viên · Uống sau ăn sáng, hỗ trợ sức đề kháng cả nhà", image: "https://unsplash.com" },
+  { id: "p2", name: "Men Vi Sinh Bào Tử Lợi Khuẩn", category: "Tiêu hóa", price: 120000, note: "Hộp 20 ống · Dùng được cho trẻ nhỏ và người lớn rối loạn tiêu hóa", image: "https://unsplash.com" },
+  { id: "p3", name: "Paracetamol 500mg Giảm Đau Hạ Sốt", category: "Giảm đau - Hạ sốt", price: 25000, note: "Vỉ 10 viên · Cách nhau tối thiểu 4–6 giờ khi sốt trên 38.5°C", image: "https://unsplash.com" },
+  { id: "p4", name: "Nước Muối Sinh Lý Rửa Mũi Họng 0.9%", category: "Chăm sóc gia đình", price: 15000, note: "Chai 500ml · Vệ sinh mũi họng hằng ngày mùa nắng bụi Trảng Dài", image: "https://unsplash.com" },
+  { id: "p5", name: "Siro Thảo Dược Giảm Ho Dịu Họng", category: "Chăm sóc gia đình", price: 68000, note: "Chai 100ml · Chiết xuất lá thường xuân, dịu họng không gây buồn ngủ", image: "https://unsplash.com" },
+  { id: "p6", name: "Oresol Bù Nước Điện Giải Vị Cam", category: "Tiêu hóa", price: 32000, note: "Hộp 10 gói · Pha đúng 1 gói với 200ml nước đun sôi để nguội", image: "https://unsplash.com" },
+];
+
+const SEED_ARTICLES: Article[] = [
+  {
+    id: "a1",
+    title: "Cách dùng thuốc hạ sốt an toàn cho trẻ nhỏ tại nhà",
+    minutes: 3,
+    body: "Khi trẻ sốt từ 38.5°C trở lên, phụ huynh nên lau mát vùng trán, nách, bẹn bằng nước ấm và cho trẻ mặc đồ thoáng. Thuốc hạ sốt Paracetamol tính theo cân nặng: 10–15mg cho mỗi kg cân nặng, mỗi lần cách nhau ít nhất 4–6 giờ.",
+    advice: "Tuyệt đối không tự ý phối hợp hai loại thuốc hạ sốt cùng lúc. Nếu trẻ sốt cao liên tục trên 48 giờ hoặc li bì, hãy đưa bé đi khám ngay.",
+    image: "https://unsplash.com",
+  },
+  {
+    id: "a2",
+    title: "Người cao tuổi uống thuốc huyết áp cần lưu ý gì mỗi sáng?",
+    minutes: 4,
+    body: "Thuốc huyết áp cần được uống đều đặn vào một khung giờ cố định mỗi ngày, thường là buổi sáng sau khi thức dậy. Không tự ý ngưng thuốc khi thấy chỉ số huyết áp đã ổn định vì dễ gây tăng huyết áp hồi ứng nguy hiểm.",
+    advice: "Cô chú nên ghi lại chỉ số đo huyết áp mỗi sáng vào sổ nhỏ và mang theo khi ghé Nhà Thuốc Phú Hải để Dược sĩ Xuân theo dõi giúp.",
+    image: "https://unsplash.com",
+  },
+  {
+    id: "a3",
+    title: "Phân biệt cảm cúm thông thường và viêm họng cần khám bác sĩ",
+    minutes: 3,
+    body: "Cảm cúm do virus thường gây sổ mũi, hắt hơi, đau mỏi người nhẹ và tự lui sau 5–7 ngày nếu nghỉ ngơi, bù nước đầy đủ. Kháng sinh không có tác dụng diệt virus cảm cúm thông thường.",
+    advice: "Chỉ dùng kháng sinh khi có chỉ định của bác sĩ. Nhà thuốc luôn sẵn sàng tư vấn giảm triệu chứng an toàn, tránh lạm dụng thuốc.",
+    image: "https://unsplash.com",
+  },
+];
+
+const SB_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+async function sbFetch(path: string, init?: RequestInit) {
+  if (!SB_URL || !SB_KEY) return null;
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${SB_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...(init?.headers || {}),
+    },
+  });
+  if (!res.ok) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+function nowTime() {
+  return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) + " · " + new Date().toLocaleDateString("vi-VN");
+}
+type StoreCtx = {
+  products: Product[];
+  articles: Article[];
+  callbacks: CallbackRequest[];
+  reservations: Reservation[];
+  addProduct: (p: Omit<Product, "id">) => void;
+  removeProduct: (id: string) => void;
+  addArticle: (a: Omit<Article, "id">) => void;
+  removeArticle: (id: string) => void;
+  addCallback: (c: Omit<CallbackRequest, "id" | "createdAt" | "done">) => void;
+  toggleCallback: (id: string) => void;
+  reserve: (productName: string, customerName: string, phone: string) => void;
+  toggleReservation: (id: string) => void;
+};
+
+const Ctx = createContext<StoreCtx | null>(null);
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
+  const [articles, setArticles] = useState<Article[]>(SEED_ARTICLES);
+  const [callbacks, setCallbacks] = useState<CallbackRequest[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+
+  useEffect(() => {
+    async function loadAll() {
+      const [pRows, aRows, cRows, rRows] = await Promise.all([
+        sbFetch("products?select=*"),
+        sbFetch("articles?select=*"),
+        sbFetch("callbacks?select=*&order=created_at.desc"),
+        sbFetch("reservations?select=*&order=created_at.desc"),
+      ]);
+
+      if (Array.isArray(pRows)) {
+        if (pRows.length > 0) setProducts(pRows);
+        else await sbFetch("products", { method: "POST", body: JSON.stringify(SEED_PRODUCTS) });
+      }
+
+      if (Array.isArray(aRows)) {
+        if (aRows.length > 0) setArticles(aRows);
+        else await sbFetch("articles", { method: "POST", body: JSON.stringify(SEED_ARTICLES) });
+      }
+
+      if (Array.isArray(cRows)) {
+        setCallbacks(
+          cRows.map((r: Record<string, unknown>) => ({
+            id: String(r.id),
+            name: String(r.name || ""),
+            phone: String(r.phone || ""),
+            reason: String(r.reason || ""),
+            note: String(r.note || ""),
+            photo: r.photo ? String(r.photo) : undefined,
+            createdAt: r.created_at ? new Date(String(r.created_at)).toLocaleString("vi-VN") : nowTime(),
+            done: Boolean(r.done),
+          }))
+        );
+      }
+
+      if (Array.isArray(rRows)) {
+        setReservations(
+          rRows.map((r: Record<string, unknown>) => ({
+            id: String(r.id),
+            productName: String(r.product_name || ""),
+            customerName: String(r.customer_name || ""),
+            phone: String(r.phone || ""),
+            createdAt: r.created_at ? new Date(String(r.created_at)).toLocaleString("vi-VN") : nowTime(),
+            done: Boolean(r.done),
+          }))
+        );
+      }
+    }
+    loadAll();
+  }, []);
+
+  const addProduct = (p: Omit<Product, "id">) => {
+    const item = { ...p, id: "p" + Date.now() };
+    setProducts((prev) => [item, ...prev]);
+    sbFetch("products", { method: "POST", body: JSON.stringify(item) });
+  };
+
+  const removeProduct = (id: string) => {
+    setProducts((prev) => prev.filter((x) => x.id !== id));
+    sbFetch(`products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+  };
+
+  const addArticle = (a: Omit<Article, "id">) => {
+    const item = { ...a, id: "a" + Date.now() };
+    setArticles((prev) => [item, ...prev]);
+    sbFetch("articles", { method: "POST", body: JSON.stringify(item) });
+  };
+
+  const removeArticle = (id: string) => {
+    setArticles((prev) => prev.filter((x) => x.id !== id));
+    sbFetch(`articles?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+  };
+
+  const addCallback = (c: Omit<CallbackRequest, "id" | "createdAt" | "done">) => {
+    const id = "c" + Date.now();
+    const item: CallbackRequest = { ...c, id, createdAt: nowTime(), done: false };
+    setCallbacks((prev) => [item, ...prev]);
+    sbFetch("callbacks", {
+      method: "POST",
+      body: JSON.stringify({
+        id,
+        name: c.name,
+        phone: c.phone,
+        reason: c.reason,
+        note: c.note,
+        photo: c.photo || null,
+        done: false,
+      }),
+    });
+  };
+
+  const toggleCallback = (id: string) => {
+    setCallbacks((prev) =>
+      prev.map((x) => {
+        if (x.id !== id) return x;
+        const next = !x.done;
+        sbFetch(`callbacks?id=eq.${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ done: next }),
+        });
+        return { ...x, done: next };
+      })
+    );
+  };
+
+  const reserve = (productName: string, customerName: string, phone: string) => {
+    const id = "r" + Date.now();
+    const item: Reservation = { id, productName, customerName, phone, createdAt: nowTime(), done: false };
+    setReservations((prev) => [item, ...prev]);
+    sbFetch("reservations", {
+      method: "POST",
+      body: JSON.stringify({
+        id,
+        product_name: productName,
+        customer_name: customerName,
+        phone,
+        done: false,
+      }),
+    });
+  };
+
+  const toggleReservation = (id: string) => {
+    setReservations((prev) =>
+      prev.map((x) => {
+        if (x.id !== id) return x;
+        const next = !x.done;
+        sbFetch(`reservations?id=eq.${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ done: next }),
+        });
+        return { ...x, done: next };
+      })
+    );
+  };
+
+  return (
+    <Ctx.Provider
+      value={{
+        products,
+        articles,
+        callbacks,
+        reservations,
+        addProduct,
+        removeProduct,
+        addArticle,
+        removeArticle,
+        addCallback,
+        toggleCallback,
+        reserve,
+        toggleReservation,
+      }}
+    >
+      {children}
+    </Ctx.Provider>
+  );
+}
+
+export function useStore() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useStore must be inside StoreProvider");
+  return ctx;
+}
+
+export const vnd = (n: number) => n.toLocaleString("vi-VN") + "đ";
