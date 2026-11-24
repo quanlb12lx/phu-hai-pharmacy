@@ -66,3 +66,12 @@ export function Field({ label, children }: { label: string; children: ReactNode 
     </label>
   );
 }
+export function BrandLogo({ className = "h-12 w-12" }: { className?: string }) {
+  return (
+    <img
+      src="/logo.png"
+      alt="Logo Nhà Thuốc Phú Hải"
+      className={`${className} rounded-xl object-contain bg-white p-0.5 shadow-sm border border-emerald-100 shrink-0`}
+    />
+  );
+}
