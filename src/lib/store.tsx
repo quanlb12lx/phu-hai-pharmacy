@@ -156,3 +156,4 @@ export const PHARMACY = {
   adminUser: "dsxuan",
   adminPass: "123456",
 };
+
