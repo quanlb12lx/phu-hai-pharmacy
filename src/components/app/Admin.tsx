@@ -10,8 +10,10 @@ import {
   Trash2,
   MessageCircle,
   PlusCircle,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
-import { useStore, PHARMACY, vnd } from "@/lib/store";
+import { useStore, PHARMACY, vnd, type Product } from "@/lib/store";
 import { Btn, Card, H2, Pill, inputCls, Field } from "./ui";
 import { cn } from "@/lib/utils";
 
@@ -94,22 +96,39 @@ export function AdminView() {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-4 pb-12">
-         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-secondary/60 px-4 py-3">      <div>        <p className="text-base font-bold text-primary-deep">👋 Xin chào, {PHARMACY.pharmacist}</p>        <p className="text-xs font-semibold text-slate-600">Trạng thái: {dbStatus}</p>      </div>      <div className="flex items-center gap-3">        <button          type="button"          onClick={() => {            refreshAll();            toast.info("Đang tải lại dữ liệu mới nhất...");          }}          className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-xs hover:bg-emerald-50"        >          Làm mới        </button>        <button          onClick={() => {            setAuthed(false);            try {              sessionStorage.removeItem("phuhai_admin_auth");            } catch {              // ignore            }          }}          className="inline-flex items-center gap-1.5 text-sm font-bold text-destructive underline"        >          <LogOut className="h-4 w-4" />          Đăng xuất        </button>      </div>    </div>
-        <p className="text-base font-bold text-primary-deep">👋 Xin chào, {PHARMACY.pharmacist}</p>
-        <button
-          onClick={() => {
-            setAuthed(false);
-            try {
-              sessionStorage.removeItem("phuhai_admin_auth");
-            } catch {
-              // ignore
-            }
-          }}
-          className="inline-flex items-center gap-1.5 text-sm font-bold text-destructive underline"
-        >
-          <LogOut className="h-4 w-4" />
-          Đăng xuất
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-secondary/60 px-4 py-3">
+        <div>
+          <p className="text-base font-bold text-primary-deep">👋 Xin chào, {PHARMACY.pharmacist}</p>
+          <p className="text-xs font-semibold text-slate-600">Trạng thái: {dbStatus}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              refreshAll();
+              toast.info("Đang tải lại dữ liệu mới nhất...");
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-xs hover:bg-emerald-50"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Làm mới
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthed(false);
+              try {
+                sessionStorage.removeItem("phuhai_admin_auth");
+              } catch {
+                // ignore
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-sm font-bold text-destructive underline"
+          >
+            <LogOut className="h-4 w-4" />
+            Đăng xuất
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -163,7 +182,7 @@ function Reservations() {
             <div className="flex flex-wrap gap-2">
               {r.phone && (
                 <a
-                  href={["https://", "zalo.me/", r.phone.replace(/\D/g, "")].join("")}
+                  href={["https", "://", "zalo.me/", r.phone.replace(/\D/g, "")].join("")}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-[#0068FF] px-4 text-base font-bold text-white"
@@ -216,49 +235,53 @@ function Callbacks() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-2xl font-extrabold">{c.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-3">
-                  <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1.5 text-lg font-bold text-primary underline">
-                    <Phone className="h-5 w-5" />
-                    {c.phone}
-                  </a>
-                  <a
-                    href={["https://", "zalo.me/", c.phone.replace(/\D/g, "")].join("")}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg bg-[#0068FF] px-3 py-1 text-sm font-bold text-white"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Zalo khách
-                  </a>
-                </div>
+                <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1.5 text-lg font-bold text-primary underline">
+                  <Phone className="h-4 w-4" />
+                  {c.phone}
+                </a>
+                <p className="mt-1 text-base font-bold text-primary-deep">{c.reason}</p>
+                {c.note && <p className="mt-1 text-base text-slate-700">{c.note}</p>}
+                <p className="mt-1 text-sm text-muted-foreground">Gửi lúc: {c.time}</p>
               </div>
-              <span className="text-sm text-muted-foreground">{c.time}</span>
+              <a
+                href={["https", "://", "zalo.me/", c.phone.replace(/\D/g, "")].join("")}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#0068FF] px-4 text-sm font-bold text-white"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Zalo khách
+              </a>
             </div>
-            <span className={cn("mt-2 inline-block rounded-full px-3 py-1 text-sm font-bold", c.done ? "bg-secondary text-primary-deep" : "bg-danger-soft text-destructive")}>
-              {c.reason}
-            </span>
-            {c.note && <p className="mt-2 text-lg">📝 {c.note}</p>}
-            {c.photo && <img src={c.photo} alt="Ảnh đơn thuốc" className="mt-3 max-h-56 rounded-xl border border-border object-contain" />}
-            {c.done ? (
-              <p className="mt-3 rounded-xl bg-secondary p-3 text-base font-medium">✓ {c.pharmacistNote || "Đã gọi tư vấn"}</p>
-            ) : (
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+
+            {c.photo && (
+              <div className="mt-3">
+                <p className="mb-1 text-xs font-semibold text-slate-500">Ảnh khách đính kèm:</p>
+                <img src={c.photo} alt="Đơn thuốc khách gửi" className="max-h-64 rounded-xl border border-slate-200 object-contain" />
+              </div>
+            )}
+
+            {!c.done ? (
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <input
                   className={inputCls}
-                  placeholder="Ghi chú nội dung đã tư vấn..."
-                  value={notes[c.id] ?? ""}
+                  placeholder="Ghi chú nội dung đã tư vấn (tùy chọn)..."
+                  value={notes[c.id] || ""}
                   onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                 />
                 <Btn
                   className="shrink-0"
                   onClick={() => {
-                    completeCallback(c.id, notes[c.id] ?? "");
-                    toast.success(`Đã hoàn tất tư vấn cho ${c.name}`);
+                    completeCallback(c.id, notes[c.id]);
+                    toast.success("Đã đánh dấu hoàn tất tư vấn!");
                   }}
                 >
-                  Đánh dấu đã tư vấn
+                  <CheckCircle2 className="h-4 w-4" />
+                  Đã gọi tư vấn xong
                 </Btn>
               </div>
+            ) : (
+              c.replyNote && <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-sm text-emerald-800">Ghi chú DS: {c.replyNote}</p>
             )}
           </Card>
         ))}
@@ -267,110 +290,118 @@ function Callbacks() {
   );
 }
 function ContentManager() {
-  const { products, addProduct, deleteProduct, addArticle } = useStore();
-  const [mode, setMode] = useState<"product" | "article">("product");
-  const [p, setP] = useState({ name: "", price: "", category: "", note: "", image: "" });
-  const [a, setA] = useState({ title: "", body: "", advice: "", image: "" });
-  const fallback = ["https://", "://unsplash.com"].join("");
+  const { products, articles, addProduct, removeProduct, addArticle, removeArticle } = useStore();
+  const [p, setP] = useState({
+    name: "",
+    category: "Tăng đề kháng" as Product["category"],
+    price: "",
+    note: "",
+    image: "https://unsplash.com",
+  });
+  const [a, setA] = useState({
+    title: "",
+    minutes: "3",
+    body: "",
+    advice: "",
+    image: "https://unsplash.com",
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card>
-        <H2>Thêm Sản phẩm / Tin sức khỏe mới</H2>
-        <div className="mb-4 flex gap-2">
-          <Pill active={mode === "product"} onClick={() => setMode("product")}>
-            Thêm sản phẩm lên kệ
-          </Pill>
-          <Pill active={mode === "article"} onClick={() => setMode("article")}>
-            Đăng tin sức khỏe
-          </Pill>
+        <H2>Thêm sản phẩm mới lên Kệ hàng</H2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Tên sản phẩm">
+            <input className={inputCls} value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="VD: Vitamin C 500mg" />
+          </Field>
+          <Field label="Danh mục">
+            <select
+              className={inputCls}
+              value={p.category}
+              onChange={(e) => setP({ ...p, category: e.target.value as Product["category"] })}
+            >
+              <option>Tăng đề kháng</option>
+              <option>Tiêu hóa</option>
+              <option>Giảm đau - Hạ sốt</option>
+              <option>Chăm sóc gia đình</option>
+            </select>
+          </Field>
+          <Field label="Giá bán (VNĐ)">
+            <input className={inputCls} type="number" value={p.price} onChange={(e) => setP({ ...p, price: e.target.value })} placeholder="85000" />
+          </Field>
+          <Field label="Ghi chú cách dùng">
+            <input className={inputCls} value={p.note} onChange={(e) => setP({ ...p, note: e.target.value })} placeholder="Hộp 30 viên..." />
+          </Field>
         </div>
+        <Btn
+          className="mt-4"
+          disabled={!p.name || !p.price}
+          onClick={() => {
+            addProduct({ name: p.name, category: p.category, price: Number(p.price), note: p.note, image: p.image });
+            toast.success("Đã thêm sản phẩm lên kệ hàng!");
+            setP({ ...p, name: "", price: "", note: "" });
+          }}
+        >
+          Đăng sản phẩm
+        </Btn>
 
-        {mode === "product" ? (
-          <div className="space-y-3">
-            <Field label="Tên sản phẩm">
-              <input className={inputCls} value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="VD: Siro ho Bảo Thanh" />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Giá bán (đ)">
-                <input className={inputCls} inputMode="numeric" value={p.price} onChange={(e) => setP({ ...p, price: e.target.value })} placeholder="55000" />
-              </Field>
-              <Field label="Danh mục">
-                <input className={inputCls} value={p.category} onChange={(e) => setP({ ...p, category: e.target.value })} placeholder="VD: Hô hấp, Vitamin..." />
-              </Field>
-            </div>
-            <Field label="Công dụng ngắn gọn">
-              <input className={inputCls} value={p.note} onChange={(e) => setP({ ...p, note: e.target.value })} placeholder="VD: Giảm ho, bổ phế cho người lớn và trẻ em" />
-            </Field>
-            <Field label="Link hình ảnh (không bắt buộc)">
-              <input className={inputCls} value={p.image} onChange={(e) => setP({ ...p, image: e.target.value })} placeholder="https://..." />
-            </Field>
-            <Btn
-              className="w-full"
-              disabled={!p.name || !p.price}
-              onClick={() => {
-                addProduct({
-                  name: p.name,
-                  price: +p.price.replace(/\D/g, ""),
-                  category: p.category || "Chăm sóc sức khỏe",
-                  note: p.note,
-                  image: p.image || fallback,
-                });
-                toast.success("Đã thêm sản phẩm lên kệ hàng!");
-                setP({ name: "", price: "", category: "", note: "", image: "" });
-              }}
-            >
-              Đăng lên Kệ hàng
-            </Btn>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <Field label="Tiêu đề bài viết">
-              <input className={inputCls} value={a.title} onChange={(e) => setA({ ...a, title: e.target.value })} />
-            </Field>
-            <Field label="Nội dung">
-              <textarea className={cn(inputCls, "min-h-28 py-2")} value={a.body} onChange={(e) => setA({ ...a, body: e.target.value })} />
-            </Field>
-            <Field label="Lời khuyên của DS. Xuân">
-              <textarea className={cn(inputCls, "min-h-20 py-2")} value={a.advice} onChange={(e) => setA({ ...a, advice: e.target.value })} />
-            </Field>
-            <Btn
-              className="w-full"
-              disabled={!a.title || !a.body}
-              onClick={() => {
-                addArticle({
-                  title: a.title,
-                  body: a.body,
-                  advice: a.advice,
-                  image: a.image || fallback,
-                  minutes: Math.max(1, Math.round(a.body.split(" ").length / 180)),
-                });
-                toast.success("Đã đăng bài lên Góc Sức Khỏe!");
-                setA({ title: "", body: "", advice: "", image: "" });
-              }}
-            >
-              Đăng bài viết
-            </Btn>
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <H2>Danh sách sản phẩm đang hiển thị ({products.length})</H2>
-        <div className="space-y-2">
+        <div className="mt-6 space-y-2">
           {products.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted p-3">
+            <div key={item.id} className="flex items-center justify-between rounded-xl border border-border p-3">
               <div>
                 <p className="font-bold">{item.name}</p>
-                <p className="text-sm font-bold text-primary">{vnd(item.price)}</p>
+                <p className="text-sm text-primary font-semibold">{vnd(item.price)} · {item.category}</p>
               </div>
               <button
                 onClick={() => {
-                  deleteProduct(item.id);
-                  toast.success("Đã xóa sản phẩm khỏi kệ");
+                  removeProduct(item.id);
+                  toast.info("Đã xóa sản phẩm");
                 }}
-                className="rounded-lg p-2 text-destructive hover:bg-danger-soft"
-                title="Xóa sản phẩm"
+                className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"
+                title="Xóa"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <H2>Đăng bài viết Góc Sức Khỏe</H2>
+        <div className="space-y-3">
+          <Field label="Tiêu đề bài viết">
+            <input className={inputCls} value={a.title} onChange={(e) => setA({ ...a, title: e.target.value })} placeholder="VD: Lưu ý khi dùng kháng sinh..." />
+          </Field>
+          <Field label="Nội dung chi tiết">
+            <textarea className={inputCls + " min-h-24 py-2"} value={a.body} onChange={(e) => setA({ ...a, body: e.target.value })} />
+          </Field>
+          <Field label="Lời khuyên của DS. Bùi Thị Xuân">
+            <input className={inputCls} value={a.advice} onChange={(e) => setA({ ...a, advice: e.target.value })} />
+          </Field>
+          <Btn
+            disabled={!a.title || !a.body}
+            onClick={() => {
+              addArticle({ title: a.title, minutes: Number(a.minutes) || 3, body: a.body, advice: a.advice, image: a.image });
+              toast.success("Đã đăng bài viết mới!");
+              setA({ ...a, title: "", body: "", advice: "" });
+            }}
+          >
+            Đăng bài viết
+          </Btn>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          {articles.map((art) => (
+            <div key={art.id} className="flex items-center justify-between rounded-xl border border-border p-3">
+              <p className="font-bold">{art.title}</p>
+              <button
+                onClick={() => {
+                  removeArticle(art.id);
+                  toast.info("Đã xóa bài viết");
+                }}
+                className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"
+                title="Xóa"
               >
                 <Trash2 className="h-5 w-5" />
               </button>
