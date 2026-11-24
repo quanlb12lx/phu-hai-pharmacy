@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 
 export const PHARMACY = {
   name: "Nhà Thuốc Phú Hải",
@@ -37,17 +37,18 @@ export type CallbackRequest = {
   reason: string;
   note: string;
   photo?: string;
-  createdAt: string;
+  time: string;
   done: boolean;
+  replyNote?: string;
 };
 
 export type Reservation = {
   id: string;
-  productName: string;
-  customerName: string;
+  product: string;
+  customer: string;
   phone: string;
-  createdAt: string;
-  done: boolean;
+  time: string;
+  ready: boolean;
 };
 
 const SEED_PRODUCTS: Product[] = [
@@ -118,10 +119,11 @@ type StoreCtx = {
   removeProduct: (id: string) => void;
   addArticle: (a: Omit<Article, "id">) => void;
   removeArticle: (id: string) => void;
-  addCallback: (c: Omit<CallbackRequest, "id" | "createdAt" | "done">) => void;
-  toggleCallback: (id: string) => void;
-  reserve: (productName: string, customerName: string, phone: string) => void;
-  toggleReservation: (id: string) => void;
+  addCallback: (c: Omit<CallbackRequest, "id" | "time" | "done">) => void;
+  completeCallback: (id: string, replyNote?: string) => void;
+  reserve: (product: string, customer: string, phone: string) => void;
+  markReady: (id: string) => void;
+  refreshAll: () => void;
 };
 
 const Ctx = createContext<StoreCtx | null>(null);
@@ -132,55 +134,58 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [callbacks, setCallbacks] = useState<CallbackRequest[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
 
-  useEffect(() => {
-    async function loadAll() {
-      const [pRows, aRows, cRows, rRows] = await Promise.all([
-        sbFetch("products?select=*"),
-        sbFetch("articles?select=*"),
-        sbFetch("callbacks?select=*&order=created_at.desc"),
-        sbFetch("reservations?select=*&order=created_at.desc"),
-      ]);
+  const refreshAll = useCallback(async () => {
+    const [pRows, aRows, cRows, rRows] = await Promise.all([
+      sbFetch("products?select=*"),
+      sbFetch("articles?select=*"),
+      sbFetch("callbacks?select=*&order=created_at.desc"),
+      sbFetch("reservations?select=*&order=created_at.desc"),
+    ]);
 
-      if (Array.isArray(pRows)) {
-        if (pRows.length > 0) setProducts(pRows);
-        else await sbFetch("products", { method: "POST", body: JSON.stringify(SEED_PRODUCTS) });
-      }
-
-      if (Array.isArray(aRows)) {
-        if (aRows.length > 0) setArticles(aRows);
-        else await sbFetch("articles", { method: "POST", body: JSON.stringify(SEED_ARTICLES) });
-      }
-
-      if (Array.isArray(cRows)) {
-        setCallbacks(
-          cRows.map((r: Record<string, unknown>) => ({
-            id: String(r.id),
-            name: String(r.name || ""),
-            phone: String(r.phone || ""),
-            reason: String(r.reason || ""),
-            note: String(r.note || ""),
-            photo: r.photo ? String(r.photo) : undefined,
-            createdAt: r.created_at ? new Date(String(r.created_at)).toLocaleString("vi-VN") : nowTime(),
-            done: Boolean(r.done),
-          }))
-        );
-      }
-
-      if (Array.isArray(rRows)) {
-        setReservations(
-          rRows.map((r: Record<string, unknown>) => ({
-            id: String(r.id),
-            productName: String(r.product_name || ""),
-            customerName: String(r.customer_name || ""),
-            phone: String(r.phone || ""),
-            createdAt: r.created_at ? new Date(String(r.created_at)).toLocaleString("vi-VN") : nowTime(),
-            done: Boolean(r.done),
-          }))
-        );
-      }
+    if (Array.isArray(pRows)) {
+      if (pRows.length > 0) setProducts(pRows);
+      else await sbFetch("products", { method: "POST", body: JSON.stringify(SEED_PRODUCTS) });
     }
-    loadAll();
+
+    if (Array.isArray(aRows)) {
+      if (aRows.length > 0) setArticles(aRows);
+      else await sbFetch("articles", { method: "POST", body: JSON.stringify(SEED_ARTICLES) });
+    }
+
+    if (Array.isArray(cRows)) {
+      setCallbacks(
+        cRows.map((r: Record<string, unknown>) => ({
+          id: String(r.id),
+          name: String(r.name || ""),
+          phone: String(r.phone || ""),
+          reason: String(r.reason || ""),
+          note: String(r.note || ""),
+          photo: r.photo ? String(r.photo) : undefined,
+          time: r.created_at ? new Date(String(r.created_at)).toLocaleString("vi-VN") : nowTime(),
+          done: Boolean(r.done),
+        }))
+      );
+    }
+
+    if (Array.isArray(rRows)) {
+      setReservations(
+        rRows.map((r: Record<string, unknown>) => ({
+          id: String(r.id),
+          product: String(r.product_name || ""),
+          customer: String(r.customer_name || ""),
+          phone: String(r.phone || ""),
+          time: r.created_at ? new Date(String(r.created_at)).toLocaleString("vi-VN") : nowTime(),
+          ready: Boolean(r.done),
+        }))
+      );
+    }
   }, []);
+
+  useEffect(() => {
+    refreshAll();
+    const timer = setInterval(refreshAll, 5000);
+    return () => clearInterval(timer);
+  }, [refreshAll]);
 
   const addProduct = (p: Omit<Product, "id">) => {
     const item = { ...p, id: "p" + Date.now() };
@@ -204,9 +209,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     sbFetch(`articles?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
   };
 
-  const addCallback = (c: Omit<CallbackRequest, "id" | "createdAt" | "done">) => {
+  const addCallback = (c: Omit<CallbackRequest, "id" | "time" | "done">) => {
     const id = "c" + Date.now();
-    const item: CallbackRequest = { ...c, id, createdAt: nowTime(), done: false };
+    const item: CallbackRequest = { ...c, id, time: nowTime(), done: false };
     setCallbacks((prev) => [item, ...prev]);
     sbFetch("callbacks", {
       method: "POST",
@@ -222,48 +227,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const toggleCallback = (id: string) => {
-    setCallbacks((prev) =>
-      prev.map((x) => {
-        if (x.id !== id) return x;
-        const next = !x.done;
-        sbFetch(`callbacks?id=eq.${encodeURIComponent(id)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ done: next }),
-        });
-        return { ...x, done: next };
-      })
-    );
+  const completeCallback = (id: string, replyNote?: string) => {
+    setCallbacks((prev) => prev.map((x) => (x.id === id ? { ...x, done: true, replyNote } : x)));
+    sbFetch(`callbacks?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ done: true }),
+    });
   };
 
-  const reserve = (productName: string, customerName: string, phone: string) => {
+  const reserve = (product: string, customer: string, phone: string) => {
     const id = "r" + Date.now();
-    const item: Reservation = { id, productName, customerName, phone, createdAt: nowTime(), done: false };
+    const item: Reservation = { id, product, customer, phone, time: nowTime(), ready: false };
     setReservations((prev) => [item, ...prev]);
     sbFetch("reservations", {
       method: "POST",
       body: JSON.stringify({
         id,
-        product_name: productName,
-        customer_name: customerName,
+        product_name: product,
+        customer_name: customer,
         phone,
         done: false,
       }),
     });
   };
 
-  const toggleReservation = (id: string) => {
-    setReservations((prev) =>
-      prev.map((x) => {
-        if (x.id !== id) return x;
-        const next = !x.done;
-        sbFetch(`reservations?id=eq.${encodeURIComponent(id)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ done: next }),
-        });
-        return { ...x, done: next };
-      })
-    );
+  const markReady = (id: string) => {
+    setReservations((prev) => prev.map((x) => (x.id === id ? { ...x, ready: true } : x)));
+    sbFetch(`reservations?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ done: true }),
+    });
   };
 
   return (
@@ -278,9 +271,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addArticle,
         removeArticle,
         addCallback,
-        toggleCallback,
+        completeCallback,
         reserve,
-        toggleReservation,
+        markReady,
+        refreshAll,
       }}
     >
       {children}
