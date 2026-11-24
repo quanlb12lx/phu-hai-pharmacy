@@ -33,7 +33,7 @@ export function AdminView() {
   const [pass, setPass] = useState("");
 
   const [tab, setTab] = useState<(typeof subs)[number]["id"]>("res");
-  const { callbacks, reservations } = useStore();
+  const { callbacks, reservations, dbStatus, refreshAll } = useStore();
   const pendingCb = callbacks.filter((c) => !c.done).length;
   const pendingRes = reservations.filter((r) => !r.ready).length;
 
@@ -94,7 +94,7 @@ export function AdminView() {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-4 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-secondary/60 px-4 py-3">
+         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-secondary/60 px-4 py-3">      <div>        <p className="text-base font-bold text-primary-deep">👋 Xin chào, {PHARMACY.pharmacist}</p>        <p className="text-xs font-semibold text-slate-600">Trạng thái: {dbStatus}</p>      </div>      <div className="flex items-center gap-3">        <button          type="button"          onClick={() => {            refreshAll();            toast.info("Đang tải lại dữ liệu mới nhất...");          }}          className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-xs hover:bg-emerald-50"        >          Làm mới        </button>        <button          onClick={() => {            setAuthed(false);            try {              sessionStorage.removeItem("phuhai_admin_auth");            } catch {              // ignore            }          }}          className="inline-flex items-center gap-1.5 text-sm font-bold text-destructive underline"        >          <LogOut className="h-4 w-4" />          Đăng xuất        </button>      </div>    </div>
         <p className="text-base font-bold text-primary-deep">👋 Xin chào, {PHARMACY.pharmacist}</p>
         <button
           onClick={() => {
