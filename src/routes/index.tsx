@@ -29,7 +29,7 @@ function Index() {
           <div className="mx-auto flex h-[72px] max-w-4xl items-center justify-between gap-3 px-4">
             <button onClick={() => setRole("patient")} className="flex items-center gap-3 text-left">
               <img
-                src="/logo.png"
+                src="/logo.png.png"
                 alt="Logo Nhà Thuốc Phú Hải"
                 className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-0.5 shadow-sm border border-border"
               />
