@@ -87,24 +87,30 @@ const SEED_ARTICLES: Article[] = [
   },
 ];
 
-const SB_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const SB_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
+const SB_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
 
 async function sbFetch(path: string, init?: RequestInit) {
-  if (!SB_URL || !SB_KEY) return null;
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: SB_KEY,
-      Authorization: `Bearer ${SB_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...(init?.headers || {}),
-    },
-  });
-  if (!res.ok) return null;
-  const text = await res.text();
-  return text ? JSON.parse(text) : [];
+  if (!SB_URL || !SB_KEY) return { ok: false, error: "Thiếu biến môi trường trên Vercel", data: null };
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      ...init,
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+        ...(init?.headers || {}),
+      },
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}: ${text.slice(0, 80)}`, data: null };
+    }
+    return { ok: true, error: "", data: text ? JSON.parse(text) : [] };
+  } catch (e) {
+    return { ok: false, error: String(e), data: null };
+  }
 }
 
 function nowTime() {
@@ -115,6 +121,7 @@ type StoreCtx = {
   articles: Article[];
   callbacks: CallbackRequest[];
   reservations: Reservation[];
+  dbStatus: string;
   addProduct: (p: Omit<Product, "id">) => void;
   removeProduct: (id: string) => void;
   addArticle: (a: Omit<Article, "id">) => void;
@@ -133,28 +140,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [articles, setArticles] = useState<Article[]>(SEED_ARTICLES);
   const [callbacks, setCallbacks] = useState<CallbackRequest[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [dbStatus, setDbStatus] = useState<string>("Đang kết nối Supabase...");
 
   const refreshAll = useCallback(async () => {
-    const [pRows, aRows, cRows, rRows] = await Promise.all([
+    if (!SB_URL || !SB_KEY) {
+      setDbStatus("Chưa có biến VITE_SUPABASE trên Vercel (cần Redeploy)");
+      return;
+    }
+
+    const [pRes, aRes, cRes, rRes] = await Promise.all([
       sbFetch("products?select=*"),
       sbFetch("articles?select=*"),
       sbFetch("callbacks?select=*&order=created_at.desc"),
       sbFetch("reservations?select=*&order=created_at.desc"),
     ]);
 
-    if (Array.isArray(pRows)) {
-      if (pRows.length > 0) setProducts(pRows);
+    if (!cRes.ok || !rRes.ok) {
+      setDbStatus(`Lỗi kết nối: ${cRes.error || rRes.error}`);
+      return;
+    }
+
+    setDbStatus(`Đã đồng bộ (${cRes.data.length} tư vấn · ${rRes.data.length} giữ hàng)`);
+
+    if (pRes.ok && Array.isArray(pRes.data)) {
+      if (pRes.data.length > 0) setProducts(pRes.data);
       else await sbFetch("products", { method: "POST", body: JSON.stringify(SEED_PRODUCTS) });
     }
 
-    if (Array.isArray(aRows)) {
-      if (aRows.length > 0) setArticles(aRows);
+    if (aRes.ok && Array.isArray(aRes.data)) {
+      if (aRes.data.length > 0) setArticles(aRes.data);
       else await sbFetch("articles", { method: "POST", body: JSON.stringify(SEED_ARTICLES) });
     }
 
-    if (Array.isArray(cRows)) {
+    if (Array.isArray(cRes.data)) {
       setCallbacks(
-        cRows.map((r: Record<string, unknown>) => ({
+        cRes.data.map((r: Record<string, unknown>) => ({
           id: String(r.id),
           name: String(r.name || ""),
           phone: String(r.phone || ""),
@@ -167,9 +187,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    if (Array.isArray(rRows)) {
+    if (Array.isArray(rRes.data)) {
       setReservations(
-        rRows.map((r: Record<string, unknown>) => ({
+        rRes.data.map((r: Record<string, unknown>) => ({
           id: String(r.id),
           product: String(r.product_name || ""),
           customer: String(r.customer_name || ""),
@@ -190,23 +210,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addProduct = (p: Omit<Product, "id">) => {
     const item = { ...p, id: "p" + Date.now() };
     setProducts((prev) => [item, ...prev]);
-    sbFetch("products", { method: "POST", body: JSON.stringify(item) });
+    sbFetch("products", { method: "POST", body: JSON.stringify(item) }).then(() => refreshAll());
   };
 
   const removeProduct = (id: string) => {
     setProducts((prev) => prev.filter((x) => x.id !== id));
-    sbFetch(`products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+    sbFetch(`products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).then(() => refreshAll());
   };
 
   const addArticle = (a: Omit<Article, "id">) => {
     const item = { ...a, id: "a" + Date.now() };
     setArticles((prev) => [item, ...prev]);
-    sbFetch("articles", { method: "POST", body: JSON.stringify(item) });
+    sbFetch("articles", { method: "POST", body: JSON.stringify(item) }).then(() => refreshAll());
   };
 
   const removeArticle = (id: string) => {
     setArticles((prev) => prev.filter((x) => x.id !== id));
-    sbFetch(`articles?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+    sbFetch(`articles?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).then(() => refreshAll());
   };
 
   const addCallback = (c: Omit<CallbackRequest, "id" | "time" | "done">) => {
@@ -224,6 +244,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         photo: c.photo || null,
         done: false,
       }),
+    }).then((res) => {
+      if (!res.ok) setDbStatus(`Lỗi gửi tư vấn: ${res.error}`);
+      else refreshAll();
     });
   };
 
@@ -232,7 +255,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     sbFetch(`callbacks?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ done: true }),
-    });
+    }).then(() => refreshAll());
   };
 
   const reserve = (product: string, customer: string, phone: string) => {
@@ -248,6 +271,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         phone,
         done: false,
       }),
+    }).then((res) => {
+      if (!res.ok) setDbStatus(`Lỗi gửi giữ hàng: ${res.error}`);
+      else refreshAll();
     });
   };
 
@@ -256,7 +282,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     sbFetch(`reservations?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ done: true }),
-    });
+    }).then(() => refreshAll());
   };
 
   return (
@@ -266,6 +292,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         articles,
         callbacks,
         reservations,
+        dbStatus,
         addProduct,
         removeProduct,
         addArticle,
