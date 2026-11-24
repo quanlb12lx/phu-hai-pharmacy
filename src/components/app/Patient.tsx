@@ -402,7 +402,7 @@ function AskTab() {
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.;
+               const file = e.target.files?.item(0);
                 if (file) {
                   const reader = new FileReader();
                   reader.onload = () => setPhoto(reader.result as string);
